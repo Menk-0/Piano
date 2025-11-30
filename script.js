@@ -47,10 +47,6 @@ const PIANO_CONFIG = {
         'F#': 128,
         'G#': 163,
         'A#': 198
-    },
-    pianoSamples: {
-        'C': 'C4', 'C#': 'C#4', 'D': 'D4', 'D#': 'D#4', 'E': 'E4', 'F': 'F4',
-        'F#': 'F#4', 'G': 'G4', 'G#': 'G#4', 'A': 'A4', 'A#': 'A#4', 'B': 'B4'
     }
 };
 
@@ -62,26 +58,21 @@ class VirtualPiano {
         this.volumeSlider = document.getElementById('volume');
         this.volumeDisplay = document.getElementById('volumeDisplay');
         this.waveformSelect = document.getElementById('waveform');
-        this.soundModeSelect = document.getElementById('soundMode');
         this.octaveSlider = document.getElementById('octave');
         this.octaveLabel = document.getElementById('octaveLabel');
         
         this.audioContext = null;
         this.mainGainNode = null;
         this.currentOscillators = new Map();
-        this.pianoSamples = new Map();
         this.volume = 0.5;
         this.waveform = 'sawtooth';
-        this.soundMode = 'synth';
         this.octave = 0;
-        this.isLoadingPiano = false;
 
         this.init();
     }
 
     async init() {
         this.initializeAudioContext();
-        await this.loadPianoSamples();
         this.createKeys();
         this.createShortcuts();
         this.attachEventListeners();
@@ -99,31 +90,6 @@ class VirtualPiano {
             
             if (this.audioContext.state === 'suspended') {
                 this.audioContext.resume();
-            }
-        }
-    }
-
-    async loadPianoSamples() {
-        if (this.isLoadingPiano) return;
-        this.isLoadingPiano = true;
-        
-        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-        const baseUrl = 'https://archive.org/download/SalamanderGrandPianoV3/Yamaha%20C5%20Grand%20-%20SalamanderGrandPiano%20v3%20(48kHz)%20OF/Yamaha%20C5%20Grand%20-%20SalamanderGrandPiano%20v3/';
-        
-        for (const note of notes) {
-            const sampleName = this.config.pianoSamples[note];
-            const fileName = `${sampleName}v10.mp3`;
-            const url = baseUrl + encodeURIComponent(fileName);
-            
-            try {
-                const response = await fetch(url);
-                if (response.ok) {
-                    const arrayBuffer = await response.arrayBuffer();
-                    const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-                    this.pianoSamples.set(note, audioBuffer);
-                }
-            } catch (err) {
-                console.warn(`Failed to load sample for ${note}:`, err);
             }
         }
     }
@@ -156,13 +122,13 @@ class VirtualPiano {
             
             keyEl.innerHTML = `<span class="key-label">${note.key}</span>`;
             
-            keyEl.addEventListener('mousedown', () => this.playNote(note.frequency, keyEl, note.note));
+            keyEl.addEventListener('mousedown', () => this.playNote(note.frequency, keyEl));
             keyEl.addEventListener('mouseup', () => this.stopNote(keyEl));
             keyEl.addEventListener('mouseleave', () => this.stopNote(keyEl));
             
             keyEl.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                this.playNote(note.frequency, keyEl, note.note);
+                this.playNote(note.frequency, keyEl);
             });
             keyEl.addEventListener('touchend', (e) => {
                 e.preventDefault();
@@ -230,15 +196,6 @@ class VirtualPiano {
             this.waveform = e.target.value;
         });
 
-        if (this.soundModeSelect) {
-            this.soundModeSelect.addEventListener('change', (e) => {
-                this.soundMode = e.target.value;
-                if (this.soundMode === 'piano' && this.pianoSamples.size === 0) {
-                    this.loadPianoSamples();
-                }
-            });
-        }
-
         this.octaveSlider.addEventListener('input', (e) => {
             this.octave = parseInt(e.target.value);
             this.octaveLabel.textContent = this.octave === 0 ? 'Octave 1' : 'Octave 2';
@@ -259,7 +216,7 @@ class VirtualPiano {
                 const keyEl = document.querySelector(`[data-key="${e.key.toUpperCase()}"][data-frequency="${noteConfig.frequency}"]`);
                 if (keyEl && !this.currentOscillators.has(keyEl)) {
                     e.preventDefault();
-                    this.playNote(noteConfig.frequency, keyEl, noteConfig.note);
+                    this.playNote(noteConfig.frequency, keyEl);
                 }
             }
         });
@@ -277,21 +234,13 @@ class VirtualPiano {
         });
     }
 
-    playNote(frequency, keyEl, noteName) {
+    playNote(frequency, keyEl) {
         this.initializeAudioContext();
         
         if (this.currentOscillators.has(keyEl)) return;
 
         keyEl.classList.add('active');
 
-        if (this.soundMode === 'piano' && this.pianoSamples.has(noteName)) {
-            this.playPianoSample(noteName, keyEl);
-        } else {
-            this.playSynthNote(frequency, keyEl);
-        }
-    }
-
-    playSynthNote(frequency, keyEl) {
         const oscillator = this.audioContext.createOscillator();
         oscillator.type = this.waveform;
         oscillator.frequency.value = frequency;
@@ -302,38 +251,20 @@ class VirtualPiano {
         oscillator.start();
     }
 
-    playPianoSample(noteName, keyEl) {
-        const sample = this.pianoSamples.get(noteName);
-        if (!sample) return;
-
-        const source = this.audioContext.createBufferSource();
-        source.buffer = sample;
-        source.connect(this.mainGainNode);
-        
-        this.currentOscillators.set(keyEl, source);
-        
-        source.start(0);
-    }
-
     stopNote(keyEl) {
         if (!this.currentOscillators.has(keyEl)) return;
 
-        const source = this.currentOscillators.get(keyEl);
+        const oscillator = this.currentOscillators.get(keyEl);
         
-        if (this.soundMode === 'piano') {
-            source.stop();
-        } else {
-            const gainNode = this.audioContext.createGain();
-            gainNode.gain.value = 1;
-            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
-            
-            source.disconnect();
-            source.connect(gainNode);
-            gainNode.connect(this.mainGainNode);
-            
-            source.stop(this.audioContext.currentTime + 0.1);
-        }
+        const gainNode = this.audioContext.createGain();
+        gainNode.gain.value = 1;
+        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
         
+        oscillator.disconnect();
+        oscillator.connect(gainNode);
+        gainNode.connect(this.mainGainNode);
+        
+        oscillator.stop(this.audioContext.currentTime + 0.1);
         this.currentOscillators.delete(keyEl);
         
         keyEl.classList.remove('active');
