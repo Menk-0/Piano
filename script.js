@@ -27,26 +27,26 @@ const PIANO_CONFIG = {
         { note: 'A#2', key: 'U', frequency: 932.33, isBlack: true },
         { note: 'B2', key: 'J', frequency: 987.77, isBlack: false }
     ],
-    blackKeyPositions: {
-        'C#': 45,
-        'D#': 105,
-        'F#': 285,
-        'G#': 345,
-        'A#': 465
+    blackKeyOffsets: {
+        'C#': -19,
+        'D#': 41,
+        'F#': 161,
+        'G#': 221,
+        'A#': 281
     },
-    blackKeyPositionsMobile: {
-        'C#': 34,
-        'D#': 79,
-        'F#': 213,
-        'G#': 258,
-        'A#': 348
+    blackKeyOffsetsMobile: {
+        'C#': -14,
+        'D#': 31,
+        'F#': 121,
+        'G#': 166,
+        'A#': 211
     },
-    blackKeyPositionsTiny: {
-        'C#': 26,
-        'D#': 61,
-        'F#': 163,
-        'G#': 198,
-        'A#': 268
+    blackKeyOffsetsTiny: {
+        'C#': -11,
+        'D#': 24,
+        'F#': 93,
+        'G#': 128,
+        'A#': 163
     }
 };
 
@@ -98,7 +98,8 @@ class VirtualPiano {
         const mainFragment = document.createDocumentFragment();
         const currentNotes = this.octave === 0 ? this.config.notes : this.config.notesRow2;
         
-        currentNotes.forEach((note) => {
+        let whiteKeyIndex = 0;
+        currentNotes.forEach((note, index) => {
             const keyEl = document.createElement('div');
             const keyClass = note.isBlack ? 'key-black' : 'key-white';
             keyEl.className = `key ${keyClass}`;
@@ -106,6 +107,12 @@ class VirtualPiano {
             keyEl.dataset.key = note.key;
             keyEl.dataset.frequency = note.frequency;
             keyEl.dataset.noteName = note.note.replace('2', '');
+            
+            if (!note.isBlack) {
+                keyEl.dataset.whiteKeyIndex = whiteKeyIndex;
+                whiteKeyIndex++;
+            }
+            
             keyEl.innerHTML = `<span class="key-label">${note.key}</span>`;
             
             keyEl.addEventListener('mousedown', () => this.playNote(note.frequency, keyEl));
@@ -130,17 +137,19 @@ class VirtualPiano {
 
     updateBlackKeyPositions() {
         const blackKeys = this.keyboard.querySelectorAll('.key-black');
+        const whiteKeys = this.keyboard.querySelectorAll('.key-white');
         const isMobile = window.innerWidth <= 768;
         const isTiny = window.innerWidth <= 480;
         
-        const positionMap = isTiny ? this.config.blackKeyPositionsTiny : 
-                           isMobile ? this.config.blackKeyPositionsMobile : 
-                           this.config.blackKeyPositions;
+        const offsetMap = isTiny ? this.config.blackKeyOffsetsTiny : 
+                         isMobile ? this.config.blackKeyOffsetsMobile : 
+                         this.config.blackKeyOffsets;
         
-        blackKeys.forEach(key => {
-            const noteName = key.dataset.noteName;
-            if (positionMap[noteName]) {
-                key.style.left = positionMap[noteName] + 'px';
+        blackKeys.forEach(blackKey => {
+            const noteName = blackKey.dataset.noteName;
+            if (offsetMap[noteName] !== undefined) {
+                const offset = offsetMap[noteName];
+                blackKey.style.left = offset + 'px';
             }
         });
     }
