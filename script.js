@@ -28,25 +28,13 @@ const PIANO_CONFIG = {
         { note: 'B2', key: 'J', frequency: 987.77, isBlack: false }
     ],
     blackKeyOffsets: {
-        'C#': 41,
-        'D#': 101,
-        'F#': 221,
-        'G#': 281,
-        'A#': 341
+        'C#': 41, 'D#': 101, 'F#': 221, 'G#': 281, 'A#': 341
     },
     blackKeyOffsetsMobile: {
-        'C#': 31,
-        'D#': 76,
-        'F#': 166,
-        'G#': 211,
-        'A#': 256
+        'C#': 31, 'D#': 76, 'F#': 166, 'G#': 211, 'A#': 256
     },
     blackKeyOffsetsTiny: {
-        'C#': 24,
-        'D#': 59,
-        'F#': 128,
-        'G#': 163,
-        'A#': 198
+        'C#': 24, 'D#': 59, 'F#': 128, 'G#': 163, 'A#': 198
     }
 };
 
@@ -58,6 +46,7 @@ class VirtualPiano {
         this.volumeSlider = document.getElementById('volume');
         this.volumeDisplay = document.getElementById('volumeDisplay');
         this.waveformSelect = document.getElementById('waveform');
+        this.soundModeSelect = document.getElementById('soundMode');
         this.octaveSlider = document.getElementById('octave');
         this.octaveLabel = document.getElementById('octaveLabel');
         
@@ -66,12 +55,13 @@ class VirtualPiano {
         this.currentOscillators = new Map();
         this.volume = 0.5;
         this.waveform = 'sawtooth';
+        this.soundMode = 'synth';
         this.octave = 0;
 
         this.init();
     }
 
-    async init() {
+    init() {
         this.initializeAudioContext();
         this.createKeys();
         this.createShortcuts();
@@ -81,16 +71,11 @@ class VirtualPiano {
 
     initializeAudioContext() {
         if (!this.audioContext) {
-            const audioContextClass = window.AudioContext || window.webkitAudioContext;
-            this.audioContext = new audioContextClass();
-            
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            this.audioContext = new AudioContextClass();
             this.mainGainNode = this.audioContext.createGain();
             this.mainGainNode.connect(this.audioContext.destination);
             this.mainGainNode.gain.value = this.volume;
-            
-            if (this.audioContext.state === 'suspended') {
-                this.audioContext.resume();
-            }
         }
     }
 
@@ -105,8 +90,7 @@ class VirtualPiano {
         const mainFragment = document.createDocumentFragment();
         const currentNotes = this.octave === 0 ? this.config.notes : this.config.notesRow2;
         
-        let whiteKeyIndex = 0;
-        currentNotes.forEach((note, index) => {
+        currentNotes.forEach((note) => {
             const keyEl = document.createElement('div');
             const keyClass = note.isBlack ? 'key-black' : 'key-white';
             keyEl.className = `key ${keyClass}`;
@@ -114,26 +98,11 @@ class VirtualPiano {
             keyEl.dataset.key = note.key;
             keyEl.dataset.frequency = note.frequency;
             keyEl.dataset.noteName = note.note.replace('2', '');
-            
-            if (!note.isBlack) {
-                keyEl.dataset.whiteKeyIndex = whiteKeyIndex;
-                whiteKeyIndex++;
-            }
-            
             keyEl.innerHTML = `<span class="key-label">${note.key}</span>`;
             
             keyEl.addEventListener('mousedown', () => this.playNote(note.frequency, keyEl));
             keyEl.addEventListener('mouseup', () => this.stopNote(keyEl));
             keyEl.addEventListener('mouseleave', () => this.stopNote(keyEl));
-            
-            keyEl.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                this.playNote(note.frequency, keyEl);
-            });
-            keyEl.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                this.stopNote(keyEl);
-            });
             
             mainFragment.appendChild(keyEl);
         });
@@ -156,9 +125,8 @@ class VirtualPiano {
         
         blackKeys.forEach(blackKey => {
             const noteName = blackKey.dataset.noteName;
-            if (offsetMap[noteName] !== undefined) {
-                const offset = offsetMap[noteName];
-                blackKey.style.left = offset + 'px';
+            if (offsetMap[noteName]) {
+                blackKey.style.left = offsetMap[noteName] + 'px';
             }
         });
     }
@@ -170,10 +138,7 @@ class VirtualPiano {
         currentNotes.forEach(note => {
             const item = document.createElement('div');
             item.className = 'shortcut-item';
-            item.innerHTML = `
-                <span class="shortcut-key">${note.key}</span>
-                <span class="shortcut-note">${note.note}</span>
-            `;
+            item.innerHTML = `<span class="shortcut-key">${note.key}</span><span class="shortcut-note">${note.note}</span>`;
             fragment.appendChild(item);
         });
 
@@ -184,12 +149,8 @@ class VirtualPiano {
     attachEventListeners() {
         this.volumeSlider.addEventListener('input', (e) => {
             this.volume = parseFloat(e.target.value);
-            const percentage = Math.round(this.volume * 100);
-            this.volumeDisplay.textContent = `${percentage}%`;
-            
-            if (this.mainGainNode) {
-                this.mainGainNode.gain.value = this.volume;
-            }
+            this.volumeDisplay.textContent = Math.round(this.volume * 100) + '%';
+            this.mainGainNode.gain.value = this.volume;
         });
 
         this.waveformSelect.addEventListener('change', (e) => {
@@ -211,11 +172,9 @@ class VirtualPiano {
         document.addEventListener('keydown', (e) => {
             const currentNotes = this.octave === 0 ? this.config.notes : this.config.notesRow2;
             const noteConfig = currentNotes.find(n => n.key.toUpperCase() === e.key.toUpperCase());
-            
             if (noteConfig) {
                 const keyEl = document.querySelector(`[data-key="${e.key.toUpperCase()}"][data-frequency="${noteConfig.frequency}"]`);
                 if (keyEl && !this.currentOscillators.has(keyEl)) {
-                    e.preventDefault();
                     this.playNote(noteConfig.frequency, keyEl);
                 }
             }
@@ -224,49 +183,40 @@ class VirtualPiano {
         document.addEventListener('keyup', (e) => {
             const currentNotes = this.octave === 0 ? this.config.notes : this.config.notesRow2;
             const noteConfig = currentNotes.find(n => n.key.toUpperCase() === e.key.toUpperCase());
-            
             if (noteConfig) {
                 const keyEl = document.querySelector(`[data-key="${e.key.toUpperCase()}"][data-frequency="${noteConfig.frequency}"]`);
-                if (keyEl) {
-                    this.stopNote(keyEl);
-                }
+                if (keyEl) this.stopNote(keyEl);
             }
         });
     }
 
     playNote(frequency, keyEl) {
         this.initializeAudioContext();
-        
         if (this.currentOscillators.has(keyEl)) return;
 
         keyEl.classList.add('active');
-
         const oscillator = this.audioContext.createOscillator();
         oscillator.type = this.waveform;
         oscillator.frequency.value = frequency;
         oscillator.connect(this.mainGainNode);
-        
         this.currentOscillators.set(keyEl, oscillator);
-        
         oscillator.start();
     }
 
     stopNote(keyEl) {
         if (!this.currentOscillators.has(keyEl)) return;
 
-        const oscillator = this.currentOscillators.get(keyEl);
-        
+        const source = this.currentOscillators.get(keyEl);
         const gainNode = this.audioContext.createGain();
         gainNode.gain.value = 1;
         gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
         
-        oscillator.disconnect();
-        oscillator.connect(gainNode);
+        source.disconnect();
+        source.connect(gainNode);
         gainNode.connect(this.mainGainNode);
+        source.stop(this.audioContext.currentTime + 0.1);
         
-        oscillator.stop(this.audioContext.currentTime + 0.1);
         this.currentOscillators.delete(keyEl);
-        
         keyEl.classList.remove('active');
     }
 }
@@ -276,11 +226,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('click', () => {
-    const audioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (audioContextClass) {
-        const ctx = new audioContextClass();
-        if (ctx.state === 'suspended') {
-            ctx.resume();
-        }
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+        const ctx = new AudioContextClass();
+        if (ctx.state === 'suspended') ctx.resume();
     }
 }, { once: true });

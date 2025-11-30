@@ -3,20 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Virtual Piano - Web Audio API</title>
+    <title>Virtual Piano</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🎹 Virtual Piano</h1>
-            <p>Click keys or use your keyboard to play (Web Audio API Synthesizer)</p>
+            <p>Click keys or use keyboard to play (A-J, W, E, T, Y, U)</p>
         </div>
 
         <div class="piano">
             <div class="keyboard" id="keyboard"></div>
 
             <div class="controls">
+                <div class="control-group">
+                    <label for="soundMode">Sound:</label>
+                    <select id="soundMode">
+                        <option value="synth">Synth</option>
+                        <option value="piano">Grand Piano</option>
+                    </select>
+                </div>
+
                 <div class="control-group">
                     <label for="volume">Volume:</label>
                     <input type="range" id="volume" min="0" max="1" step="0.01" value="0.5">
