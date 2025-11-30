@@ -104,6 +104,19 @@ class VirtualPiano {
             keyEl.addEventListener('mouseup', () => this.stopNote(keyEl));
             keyEl.addEventListener('mouseleave', () => this.stopNote(keyEl));
             
+            keyEl.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.playNote(note.frequency, keyEl);
+            });
+            keyEl.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.stopNote(keyEl);
+            });
+            keyEl.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                this.stopNote(keyEl);
+            });
+            
             mainFragment.appendChild(keyEl);
         });
 
