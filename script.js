@@ -95,6 +95,13 @@ class VirtualPiano {
     }
 
     createKeys() {
+        let wrapper = this.keyboard.querySelector('.keyboard-keys-wrapper');
+        if (!wrapper) {
+            wrapper = document.createElement('div');
+            wrapper.className = 'keyboard-keys-wrapper';
+            this.keyboard.appendChild(wrapper);
+        }
+
         const mainFragment = document.createDocumentFragment();
         const currentNotes = this.octave === 0 ? this.config.notes : this.config.notesRow2;
         
@@ -131,13 +138,15 @@ class VirtualPiano {
             mainFragment.appendChild(keyEl);
         });
 
-        this.keyboard.innerHTML = '';
-        this.keyboard.appendChild(mainFragment);
+        wrapper.innerHTML = '';
+        wrapper.appendChild(mainFragment);
     }
 
     updateBlackKeyPositions() {
-        const blackKeys = this.keyboard.querySelectorAll('.key-black');
-        const whiteKeys = this.keyboard.querySelectorAll('.key-white');
+        const wrapper = this.keyboard.querySelector('.keyboard-keys-wrapper');
+        if (!wrapper) return;
+
+        const blackKeys = wrapper.querySelectorAll('.key-black');
         const isMobile = window.innerWidth <= 768;
         const isTiny = window.innerWidth <= 480;
         
