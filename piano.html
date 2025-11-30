@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Piano</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+            letter-spacing: 0.5px;
+        }
+
+        .piano {
+            background: linear-gradient(to bottom, #1a1a2e, #16213e);
+            border-radius: 20px;
+            padding: 30px 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .keyboard {
+            position: relative;
+            display: flex;
+            gap: 0;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            justify-content: center;
+        }
+
+        /* WHITE KEYS */
+        .key-white {
+            width: 60px;
+            height: 280px;
+            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 95%, #e0e0e0 100%);
+            border: 1px solid #999;
+            border-radius: 0 0 8px 8px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.05s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .key-white:hover:not(.active) {
+            background: linear-gradient(to bottom, #f9f9f9 0%, #efefef 95%, #d8d8d8 100%);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+
+        .key-white.active {
+            background: linear-gradient(to bottom, #d0d0d0 0%, #c0c0c0 95%, #a0a0a0 100%);
+            transform: translateY(4px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3),
+                        inset 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        /* BLACK KEYS */
+        .key-black {
+            width: 38px;
+            height: 170px;
+            background: linear-gradient(to bottom, #222 0%, #1a1a1a 95%, #000 100%);
+            border: 1px solid #000;
+            border-radius: 0 0 6px 6px;
+            cursor: pointer;
+            position: absolute;
+            top: 20px;
+            transition: all 0.05s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            user-select: none;
+            z-index: 10;
+        }
+
+        .key-black:hover:not(.active) {
+            background: linear-gradient(to bottom, #333 0%, #222 95%, #111 100%);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .key-black.active {
+            background: linear-gradient(to bottom, #1a1a1a 0%, #111 95%, #000 100%);
+            transform: translateY(3px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        /* BLACK KEY POSITIONING */
+        .key-black:nth-child(2) { left: 45px; }
+        .key-black:nth-child(3) { left: 105px; }
+        .key-black:nth-child(7) { left: 285px; }
+        .key-black:nth-child(8) { left: 345px; }
+        .key-black:nth-child(9) { left: 465px; }
+        .key-black:nth-child(13) { left: 645px; }
+        .key-black:nth-child(14) { left: 705px; }
+
+        /* KEY LABELS */
+        .key-label {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            pointer-events: none;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
+        }
+
+        .key-white .key-label {
+            color: #999;
+        }
+
+        .key-black .key-label {
+            color: #aaa;
+            font-size: 10px;
+        }
+
+        .key.active .key-label {
+            opacity: 1;
+        }
+
+        /* CONTROLS */
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-group label {
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        input[type="range"] {
+            width: 120px;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+
+        .volume-display {
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        /* KEYBOARD SHORTCUTS */
+        .shortcuts {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .shortcuts-title {
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .shortcuts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 8px;
+        }
+
+        .shortcut-item {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+            font-size: 11px;
+            color: #b8c5ff;
+            transition: all 0.2s ease;
+        }
+
+        .shortcut-item:hover {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: rgba(102, 126, 234, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .shortcut-key {
+            display: block;
+            font-weight: 700;
+            color: #e0e0ff;
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+
+        .shortcut-note {
+            display: block;
+            font-size: 10px;
+            opacity: 0.7;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 32px;
+            }
+
+            .key-white {
+                width: 45px;
+                height: 210px;
+            }
+
+            .key-black {
+                width: 28px;
+                height: 128px;
+            }
+
+            .key-black:nth-child(2) { left: 34px; }
+            .key-black:nth-child(3) { left: 79px; }
+            .key-black:nth-child(7) { left: 213px; }
+            .key-black:nth-child(8) { left: 258px; }
+            .key-black:nth-child(9) { left: 348px; }
+            .key-black:nth-child(13) { left: 483px; }
+            .key-black:nth-child(14) { left: 528px; }
+
+            .shortcuts-grid {
+                grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .piano {
+                padding: 20px 10px;
+            }
+
+            .keyboard {
+                padding: 15px;
+            }
+
+            .key-white {
+                width: 35px;
+                height: 160px;
+            }
+
+            .key-black {
+                width: 22px;
+                height: 98px;
+                top: 15px;
+            }
+
+            .key-label {
+                font-size: 9px;
+                bottom: 4px;
+            }
+
+            .key-black .key-label {
+                font-size: 8px;
+            }
+
+            .key-black:nth-child(2) { left: 26px; }
+            .key-black:nth-child(3) { left: 61px; }
+            .key-black:nth-child(7) { left: 163px; }
+            .key-black:nth-child(8) { left: 198px; }
+            .key-black:nth-child(9) { left: 268px; }
+            .key-black:nth-child(13) { left: 371px; }
+            .key-black:nth-child(14) { left: 406px; }
+
+            .controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .control-group {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .shortcuts-grid {
+                grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+            }
+
+            .shortcut-item {
+                padding: 6px 4px;
+                font-size: 10px;
+            }
+        }
+
+        /* ANIMATIONS */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .piano {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .header {
+            animation: fadeIn 0.6s ease-out 0.1s both;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎹 Virtual Piano</h1>
+            <p>Click keys or use your keyboard to play</p>
+        </div>
+
+        <div class="piano">
+            <div class="keyboard" id="keyboard">
+                <!-- Keys generated by JavaScript -->
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="volume">Volume:</label>
+                    <input type="range" id="volume" min="0" max="1" step="0.01" value="0.5">
+                    <span class="volume-display" id="volumeDisplay">50%</span>
+                </div>
+            </div>
+
+            <div class="shortcuts">
+                <div class="shortcuts-title">⌨️ Keyboard Shortcuts</div>
+                <div class="shortcuts-grid" id="shortcutsGrid">
+                    <!-- Shortcuts generated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // VIRTUAL PIANO - OPTIMIZED IMPLEMENTATION
+        // ========================================
+
+        // Piano Configuration
+        const PIANO_CONFIG = {
+            notes: [
+                { note: 'C', key: 'A', isBlack: false },
+                { note: 'C#', key: 'W', isBlack: true },
+                { note: 'D', key: 'S', isBlack: false },
+                { note: 'D#', key: 'E', isBlack: true },
+                { note: 'E', key: 'D', isBlack: false },
+                { note: 'F', key: 'F', isBlack: false },
+                { note: 'F#', key: 'T', isBlack: true },
+                { note: 'G', key: 'G', isBlack: false },
+                { note: 'G#', key: 'Y', isBlack: true },
+                { note: 'A', key: 'H', isBlack: false },
+                { note: 'A#', key: 'U', isBlack: true },
+                { note: 'B', key: 'J', isBlack: false }
+            ]
+        };
+
+        class VirtualPiano {
+            constructor(config) {
+                this.config = config;
+                this.keyboard = document.getElementById('keyboard');
+                this.shortcutsGrid = document.getElementById('shortcutsGrid');
+                this.volumeSlider = document.getElementById('volume');
+                this.volumeDisplay = document.getElementById('volumeDisplay');
+                
+                // Audio Context (lazy loaded)
+                this.audioContext = null;
+                this.audioBuffers = new Map();
+                this.currentlyPlayingNotes = new Set();
+                this.volume = 0.5;
+
+                this.init();
+            }
+
+            async init() {
+                this.createKeys();
+                this.createShortcuts();
+                this.attachEventListeners();
+                this.initializeAudioContext();
+            }
+
+            initializeAudioContext() {
+                // Initialize audio context on first user interaction
+                if (!this.audioContext) {
+                    const audioContextClass = window.AudioContext || window.webkitAudioContext;
+                    this.audioContext = new audioContextClass();
+                    if (this.audioContext.state === 'suspended') {
+                        this.audioContext.resume();
+                    }
+                }
+            }
+
+            createKeys() {
+                const fragment = document.createDocumentFragment();
+                
+                this.config.notes.forEach((note, index) => {
+                    const keyEl = document.createElement('div');
+                    const keyClass = note.isBlack ? 'key-black' : 'key-white';
+                    keyEl.className = `key ${keyClass}`;
+                    keyEl.dataset.note = note.note;
+                    keyEl.dataset.key = note.key;
+                    keyEl.innerHTML = `<span class="key-label">${note.key}</span>`;
+                    keyEl.addEventListener('mousedown', () => this.playNote(note.note, keyEl));
+                    keyEl.addEventListener('mouseup', () => this.stopNote(note.note, keyEl));
+                    keyEl.addEventListener('mouseleave', () => this.stopNote(note.note, keyEl));
+                    keyEl.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        this.playNote(note.note, keyEl);
+                    });
+                    keyEl.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        this.stopNote(note.note, keyEl);
+                    });
+                    
+                    fragment.appendChild(keyEl);
+                });
+
+                this.keyboard.appendChild(fragment);
+            }
+
+            createShortcuts() {
+                const fragment = document.createDocumentFragment();
+                
+                this.config.notes.forEach(note => {
+                    const item = document.createElement('div');
+                    item.className = 'shortcut-item';
+                    item.innerHTML = `
+                        <span class="shortcut-key">${note.key}</span>
+                        <span class="shortcut-note">${note.note}</span>
+                    `;
+                    fragment.appendChild(item);
+                });
+
+                this.shortcutsGrid.appendChild(fragment);
+            }
+
+            attachEventListeners() {
+                // Volume control
+                this.volumeSlider.addEventListener('input', (e) => {
+                    this.volume = parseFloat(e.target.value);
+                    const percentage = Math.round(this.volume * 100);
+                    this.volumeDisplay.textContent = `${percentage}%`;
+                });
+
+                // Keyboard input
+                document.addEventListener('keydown', (e) => {
+                    const noteConfig = this.config.notes.find(n => n.key.toUpperCase() === e.key.toUpperCase());
+                    if (noteConfig) {
+                        e.preventDefault();
+                        const keyEl = document.querySelector(`[data-key="${e.key.toUpperCase()}"]`);
+                        if (keyEl && !this.currentlyPlayingNotes.has(noteConfig.note)) {
+                            this.playNote(noteConfig.note, keyEl);
+                        }
+                    }
+                });
+
+                document.addEventListener('keyup', (e) => {
+                    const noteConfig = this.config.notes.find(n => n.key.toUpperCase() === e.key.toUpperCase());
+                    if (noteConfig) {
+                        const keyEl = document.querySelector(`[data-key="${e.key.toUpperCase()}"]`);
+                        if (keyEl) {
+                            this.stopNote(noteConfig.note, keyEl);
+                        }
+                    }
+                });
+            }
+
+            playNote(note, keyEl) {
+                this.initializeAudioContext();
+                
+                if (this.currentlyPlayingNotes.has(note)) return;
+                this.currentlyPlayingNotes.add(note);
+
+                // Visual feedback
+                keyEl.classList.add('active');
+
+                // Play sound
+                this.playSound(note);
+            }
+
+            stopNote(note, keyEl) {
+                this.currentlyPlayingNotes.delete(note);
+                keyEl.classList.remove('active');
+            }
+
+            playSound(note) {
+                if (!this.audioContext) return;
+
+                // Create audio file path
+                const audioPath = `sounds/${note}.mp3`;
+
+                // Use Web Audio API to play sound
+                // For production, preload audio files for better performance
+                const audio = new Audio(audioPath);
+                audio.volume = this.volume;
+                audio.playbackRate = 1;
+                
+                // Prevent multiple overlapping plays
+                audio.currentTime = 0;
+                
+                // Play with error handling
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            // Audio is playing
+                        })
+                        .catch(error => {
+                            // Auto-play failed, user interaction required
+                            console.log('Audio play failed:', error);
+                        });
+                }
+            }
+        }
+
+        // Initialize Piano
+        document.addEventListener('DOMContentLoaded', () => {
+            new VirtualPiano(PIANO_CONFIG);
+        });
+
+        // Handle first user interaction for audio context
+        document.addEventListener('click', () => {
+            const audioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (audioContextClass && audioContextClass.state === 'suspended') {
+                const ctx = new audioContextClass();
+                ctx.resume();
+            }
+        }, { once: true });
+    </script>
+</body>
+</html>
