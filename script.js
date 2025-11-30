@@ -26,7 +26,28 @@ const PIANO_CONFIG = {
         { note: 'A2', key: 'H', frequency: 880.00, isBlack: false },
         { note: 'A#2', key: 'U', frequency: 932.33, isBlack: true },
         { note: 'B2', key: 'J', frequency: 987.77, isBlack: false }
-    ]
+    ],
+    blackKeyPositions: {
+        'C#': 45,
+        'D#': 105,
+        'F#': 285,
+        'G#': 345,
+        'A#': 465
+    },
+    blackKeyPositionsMobile: {
+        'C#': 34,
+        'D#': 79,
+        'F#': 213,
+        'G#': 258,
+        'A#': 348
+    },
+    blackKeyPositionsTiny: {
+        'C#': 26,
+        'D#': 61,
+        'F#': 163,
+        'G#': 198,
+        'A#': 268
+    }
 };
 
 class VirtualPiano {
@@ -55,6 +76,7 @@ class VirtualPiano {
         this.createKeys();
         this.createShortcuts();
         this.attachEventListeners();
+        this.updateBlackKeyPositions();
     }
 
     initializeAudioContext() {
@@ -83,6 +105,7 @@ class VirtualPiano {
             keyEl.dataset.note = note.note;
             keyEl.dataset.key = note.key;
             keyEl.dataset.frequency = note.frequency;
+            keyEl.dataset.noteName = note.note.replace('2', '');
             keyEl.innerHTML = `<span class="key-label">${note.key}</span>`;
             
             keyEl.addEventListener('mousedown', () => this.playNote(note.frequency, keyEl));
@@ -103,6 +126,23 @@ class VirtualPiano {
 
         this.keyboard.innerHTML = '';
         this.keyboard.appendChild(mainFragment);
+    }
+
+    updateBlackKeyPositions() {
+        const blackKeys = this.keyboard.querySelectorAll('.key-black');
+        const isMobile = window.innerWidth <= 768;
+        const isTiny = window.innerWidth <= 480;
+        
+        const positionMap = isTiny ? this.config.blackKeyPositionsTiny : 
+                           isMobile ? this.config.blackKeyPositionsMobile : 
+                           this.config.blackKeyPositions;
+        
+        blackKeys.forEach(key => {
+            const noteName = key.dataset.noteName;
+            if (positionMap[noteName]) {
+                key.style.left = positionMap[noteName] + 'px';
+            }
+        });
     }
 
     createShortcuts() {
@@ -143,6 +183,11 @@ class VirtualPiano {
             this.octaveLabel.textContent = this.octave === 0 ? 'Octave 1' : 'Octave 2';
             this.createKeys();
             this.createShortcuts();
+            this.updateBlackKeyPositions();
+        });
+
+        window.addEventListener('resize', () => {
+            this.updateBlackKeyPositions();
         });
 
         document.addEventListener('keydown', (e) => {
