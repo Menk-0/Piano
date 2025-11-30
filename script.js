@@ -1,8 +1,3 @@
-// ========================================
-// VIRTUAL PIANO - WEB AUDIO API SYNTHESIZER
-// ========================================
-
-// Piano Configuration with frequencies
 const PIANO_CONFIG = {
     rows: [
         {
@@ -49,7 +44,6 @@ class VirtualPiano {
         this.volumeDisplay = document.getElementById('volumeDisplay');
         this.waveformSelect = document.getElementById('waveform');
         
-        // Web Audio API
         this.audioContext = null;
         this.mainGainNode = null;
         this.currentOscillators = new Map();
@@ -71,12 +65,10 @@ class VirtualPiano {
             const audioContextClass = window.AudioContext || window.webkitAudioContext;
             this.audioContext = new audioContextClass();
             
-            // Create master gain node for volume control
             this.mainGainNode = this.audioContext.createGain();
             this.mainGainNode.connect(this.audioContext.destination);
             this.mainGainNode.gain.value = this.volume;
             
-            // Resume audio context if suspended
             if (this.audioContext.state === 'suspended') {
                 this.audioContext.resume();
             }
@@ -152,7 +144,6 @@ class VirtualPiano {
     }
 
     attachEventListeners() {
-        // Volume control
         this.volumeSlider.addEventListener('input', (e) => {
             this.volume = parseFloat(e.target.value);
             const percentage = Math.round(this.volume * 100);
@@ -163,12 +154,10 @@ class VirtualPiano {
             }
         });
 
-        // Waveform control
         this.waveformSelect.addEventListener('change', (e) => {
             this.waveform = e.target.value;
         });
 
-        // Keyboard input
         document.addEventListener('keydown', (e) => {
             let noteConfig = null;
             let keyEl = null;
@@ -210,19 +199,15 @@ class VirtualPiano {
         
         if (this.currentOscillators.has(keyEl)) return;
 
-        // Visual feedback
         keyEl.classList.add('active');
 
-        // Create oscillator
         const oscillator = this.audioContext.createOscillator();
         oscillator.type = this.waveform;
         oscillator.frequency.value = frequency;
         oscillator.connect(this.mainGainNode);
         
-        // Store reference
         this.currentOscillators.set(keyEl, oscillator);
         
-        // Start oscillator
         oscillator.start();
     }
 
@@ -231,7 +216,6 @@ class VirtualPiano {
 
         const oscillator = this.currentOscillators.get(keyEl);
         
-        // Smooth stop with slight fade out
         const gainNode = this.audioContext.createGain();
         gainNode.gain.value = 1;
         gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
@@ -243,17 +227,14 @@ class VirtualPiano {
         oscillator.stop(this.audioContext.currentTime + 0.1);
         this.currentOscillators.delete(keyEl);
         
-        // Visual feedback
         keyEl.classList.remove('active');
     }
 }
 
-// Initialize Piano on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     new VirtualPiano(PIANO_CONFIG);
 });
 
-// Resume audio context on first user interaction
 document.addEventListener('click', () => {
     const audioContextClass = window.AudioContext || window.webkitAudioContext;
     if (audioContextClass) {
